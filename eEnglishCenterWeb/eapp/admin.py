@@ -14,6 +14,16 @@ from sqlalchemy import func
 class AdminView(ModelView):
     def is_accessible(self): return current_user.is_authenticated and current_user.user_role == UserRole.ADMIN
 
+# eapp/admin.py
+
+# ... (Giữ nguyên TeacherBaseView cũ để dùng cho các trang thống kê/view thường)
+
+# --- THÊM CLASS MỚI NÀY ---
+class TeacherModelView(ModelView):
+    def is_accessible(self):
+        # Cho phép nếu là Admin HOẶC Teacher
+        return current_user.is_authenticated and \
+               (current_user.user_role == UserRole.ADMIN or current_user.user_role == UserRole.TEACHER)
 class TeacherBaseView(BaseView):
     def is_accessible(self):
         # Cho phép nếu đã đăng nhập VÀ (là Admin HOẶC là Teacher)
@@ -87,15 +97,25 @@ class ClassView(AdminView):
         flash('Đã khóa lớp!', 'success')
 
 
-class GradeColumnView(AdminView):
-    column_list = ['study_class', 'name', 'weight']
-    column_editable_list = ['name', 'weight']
-    column_filters = ['class_id']
+# eapp/admin.py
 
-    def get_query(self):
-        q = super(GradeColumnView, self).get_query()
-        if current_user.user_role == UserRole.TEACHER: q = q.join(Class).filter(Class.teacher_id == current_user.id)
-        return q
+# Đảm bảo class này kế thừa TeacherBaseView
+class GradeColumnView(TeacherModelView):
+    column_list = ['study_class', 'name', 'weight']
+    column_labels = {'study_class': 'Lớp học', 'name': 'Tên cột điểm', 'weight': 'Trọng số (%)'}
+
+    form_columns = ['study_class', 'name', 'weight']
+
+    # Cho phép tạo, sửa, xóa
+    can_create = True
+    can_edit = True
+    can_delete = True
+
+    # Ràng buộc: Tổng trọng số không quá 100% (Optional)
+    def on_model_change(self, form, model, is_created):
+        # Logic kiểm tra trọng số nếu cần
+        if model.weight < 0 or model.weight > 100:
+            raise Exception('Trọng số phải từ 0 đến 100!')
 
 
 class ReceiptView(AdminView):
@@ -156,27 +176,30 @@ class ReceiptView(AdminView):
             if g: db.session.delete(g)
 
 # --- ĐÂY LÀ VIEW QUAN TRỌNG NHẤT: NHẬP ĐIỂM DYNAMIC ---
+# eapp/admin.py
+
 class GradeManagerView(TeacherBaseView):
     @expose('/')
     def index(self):
         class_id = request.args.get('class_id')
         chosen_class, columns, rows = None, [], []
 
-        # 1. Lấy danh sách lớp để lọc
-        classes = Class.query.all() if current_user.user_role == UserRole.ADMIN else Class.query.filter(
-            Class.teacher_id == current_user.id).all()
+        # 1. Lấy danh sách lớp để lọc (Admin thấy hết, GV chỉ thấy lớp mình)
+        if current_user.user_role == UserRole.ADMIN:
+            classes = Class.query.all()
+        else:
+            classes = Class.query.filter(Class.teacher_id == current_user.id).all()
 
         if class_id:
             chosen_class = Class.query.get(class_id)
             if chosen_class:
-                # 2. Lấy các cột điểm của lớp này (Dynamic)
+                # 2. Lấy cấu trúc cột điểm của lớp
                 columns = GradeColumn.query.filter_by(class_id=class_id).all()
 
-                # 3. Lấy danh sách sinh viên và điểm số của họ
+                # 3. Lấy bảng điểm của sinh viên
                 grades = Grade.query.filter_by(class_id=class_id).all()
 
                 for g in grades:
-                    # Tạo cấu trúc dữ liệu cho mỗi dòng sinh viên
                     row = {
                         'student_name': g.student.name,
                         'student_code': g.student.username,
@@ -185,11 +208,9 @@ class GradeManagerView(TeacherBaseView):
                         'result': g.result,
                         'scores': {}
                     }
-                    # Lấy điểm chi tiết
                     details = GradeScore.query.filter_by(grade_id=g.id).all()
                     for s in details:
                         row['scores'][s.grade_column_id] = s.value  # Map: id cột -> điểm
-
                     rows.append(row)
 
         return self.render('admin/grade_matrix.html', classes=classes, chosen_class=chosen_class, columns=columns,
@@ -201,9 +222,18 @@ class GradeManagerView(TeacherBaseView):
             d = request.json
             grade_id = d.get('grade_id')
             col_id = d.get('column_id')
-            val = float(d.get('value'))
 
-            # 1. Lưu điểm chi tiết
+            # --- KIỂM TRA DỮ LIỆU ĐẦU VÀO (VALIDATION) ---
+            try:
+                val = float(d.get('value'))
+            except ValueError:
+                return jsonify({'status': 'error', 'msg': 'Điểm phải là số!'})
+
+            if val < 0 or val > 10:
+                return jsonify({'status': 'error', 'msg': 'Điểm không hợp lệ (Phải từ 0 đến 10)!'})
+            # ---------------------------------------------
+
+            # 1. Lưu/Cập nhật điểm chi tiết
             score = GradeScore.query.filter_by(grade_id=grade_id, grade_column_id=col_id).first()
             if score:
                 score.value = val
@@ -217,31 +247,23 @@ class GradeManagerView(TeacherBaseView):
             # 3. Trả về kết quả mới
             g = Grade.query.get(grade_id)
             return jsonify({'status': 'success', 'new_avg': g.final_average, 'new_res': g.result})
+
         except Exception as e:
             return jsonify({'status': 'error', 'msg': str(e)})
 
     def recalculate(self, grade_id):
-        # 1. Lấy tất cả điểm của sinh viên này
         scores = GradeScore.query.filter_by(grade_id=grade_id).all()
-
-        total_score_weighted = 0  # Tổng điểm nhân hệ số
-        total_weight = 0  # Tổng trọng số thực tế
+        total_score_weighted = 0
+        total_weight = 0
 
         for s in scores:
-            w = s.column_info.weight  # Lấy trọng số của cột (VD: 10, 30, 60...)
-
-            # Chỉ tính những cột đã có điểm (nếu muốn bỏ qua cột chưa nhập)
-            # Hoặc tính tất cả (coi như 0 điểm). Ở đây mình tính tất cả.
+            w = s.column_info.weight
             total_score_weighted += s.value * w
             total_weight += w
 
         g = Grade.query.get(grade_id)
 
-        # --- ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT ---
-        # Cũ: Chia cho 100 (Cứng nhắc, lỗi nếu tổng > 100)
-        # g.final_average = round(total_score_weighted / 100, 1)
-
-        # Mới: Chia cho tổng trọng số thực tế (Linh hoạt)
+        # Chia theo tổng trọng số thực tế (Linh hoạt hơn chia cứng cho 100)
         if total_weight > 0:
             g.final_average = round(total_score_weighted / total_weight, 2)
         else:
