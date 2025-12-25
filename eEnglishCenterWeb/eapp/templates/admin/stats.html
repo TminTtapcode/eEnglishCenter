@@ -135,7 +135,7 @@ window.onload = function() {
     const ctxStudent = document.getElementById('studentChart');
     {% if student_stats %}
     new Chart(ctxStudent, {
-        type: 'pie',
+        type: 'pie', // Dạng bánh Donut (hoặc đổi thành ' nếu thích tròn đặc)
         data: {
             labels: [{% for s in student_stats %} "{{s[0]}}", {% endfor %}],
             datasets: [{
@@ -155,7 +155,6 @@ window.onload = function() {
         }
     });
     {% endif %}
-
 
     const ctxPass = document.getElementById('passRateChart');
     {% if pass_stats %}

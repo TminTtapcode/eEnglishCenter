@@ -37,13 +37,11 @@
         const inputs = document.querySelectorAll(".score-input");
 
         inputs.forEach(input => {
-            // Sự kiện: Khi rời chuột khỏi ô nhập (Blur)
             input.addEventListener("blur", function() {
                 const id = this.getAttribute("data-id");
                 const field = this.getAttribute("data-field");
                 const value = this.value;
 
-                // Hiệu ứng đang lưu (mờ đi)
                 this.style.opacity = "0.5";
 
                 fetch('/admin/grade/ajax_update', {
@@ -57,9 +55,8 @@
 
                     if(data.status === 'success') {
                         showToast("Đã lưu điểm thành công!", "success");
-                        this.style.backgroundColor = "#d4edda"; // Màu xanh nhạt
+                        this.style.backgroundColor = "#d4edda";
 
-                        // Cập nhật cột Kết Quả (Đạt/Không Đạt) ngay lập tức
                         const resSpan = document.getElementById('result-' + id);
                         if (resSpan) {
                             resSpan.innerText = data.new_result;
@@ -71,9 +68,8 @@
                             }
                         }
                     } else {
-                        // Báo lỗi (VD: Nhập quá 10 điểm, hoặc lớp đã kết thúc)
                         showToast(data.msg, "danger");
-                        this.style.backgroundColor = "#f8d7da"; // Màu đỏ nhạt
+                        this.style.backgroundColor = "#f8d7da";
                     }
                 })
                 .catch(err => {
@@ -82,13 +78,11 @@
                 });
             });
 
-            // Sự kiện: Bấm Enter cũng lưu
             input.addEventListener("keypress", function(e) {
                 if (e.key === "Enter") { e.preventDefault(); this.blur(); }
             });
         });
 
-        // Hàm hiện thông báo góc màn hình
         function showToast(msg, type) {
             const t = document.createElement('div');
             t.className = `alert alert-${type} shadow-sm`;

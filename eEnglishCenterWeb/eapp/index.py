@@ -4,7 +4,8 @@ import math
 from flask import render_template, request, redirect,jsonify,session
 from flask_login import login_user, logout_user,login_required,current_user
 from eapp import app,dao,login, utils,db
-from eapp.Models import Grade, Class
+from eapp.Models import Grade, Class,Course
+from eapp.dao import add_user
 
 
 @app.route('/')
@@ -76,7 +77,7 @@ def course_detail(course_id):
     course = Course.query.get(course_id)
 
     if not course:
-        return render_template('404.html')  # Hoặc redirect về trang chủ
+        return render_template('404.html')
 
     return render_template('course_detail.html', c=course)
 
@@ -131,6 +132,7 @@ def login_process():
         next_page = request.args.get("next")
         return redirect(next_page if next_page else '/')
     else:
+
         return render_template('login.html',
                                err_msg='Tên đăng nhập hoặc mật khẩu không chính xác!',
                                username=username)  # Giữ lại username cũ
@@ -243,4 +245,5 @@ def common_responeses():
         'cart_stats': utils.stats_cart(session.get('cart'))
     }
 if __name__ == '__main__':
+    from eapp import admin
     app.run(debug=True)

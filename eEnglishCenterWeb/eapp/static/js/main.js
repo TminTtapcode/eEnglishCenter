@@ -1,6 +1,5 @@
 function addToCartSmart(id, name, price) {
     event.preventDefault();
-
     fetch('/api/carts', {
         method: 'post',
         body: JSON.stringify({
@@ -17,7 +16,6 @@ function addToCartSmart(id, name, price) {
         if (data.error) {
             alert(data.error);
         } else {
-           giỏ hàng
             let counter = document.getElementsByClassName('cart-counter');
             for (let i = 0; i < counter.length; i++)
                 counter[i].innerText = data.total_quantity;

@@ -6,9 +6,7 @@ from eapp.Models import Class, Grade
 
 
 def send_payment_confirmation(user_email, user_name, cart):
-    """
-    Hàm gửi mail xác nhận đăng ký
-    """
+
     sender_email = "oakceniki@gmail.com"
     sender_password = "sgsl xyss mdjl jmcp"
 
@@ -152,7 +150,7 @@ def check_conflict(new_class_id, current_user_id, cart=None):
     if cart:
         for item in cart.values():
             cart_c = Class.query.get(int(item['id']))
-            if cart_c and cart_c.id != new_class.id:  # Không so sánh với chính nó
+            if cart_c and cart_c.id != new_class.id:
                 busy_list.append({'class': cart_c, 'source': 'Lớp trong giỏ'})
 
     for item in busy_list:

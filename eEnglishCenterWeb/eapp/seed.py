@@ -43,7 +43,7 @@ def clean_database():
         conn.commit()
         tables = ['grade_score', 'grade_column', 'grade_summary', 'grade',
                   'attendance', 'receipt_details', 'receipt',
-                  'class', 'course', 'category', 'user', 'time_slot']  # Thêm time_slot vào để xóa sạch
+                  'class', 'course', 'category', 'user', 'time_slot']
         for t in tables:
             conn.execute(text(f"DROP TABLE IF EXISTS {t}"))
 
@@ -130,7 +130,7 @@ def init_data():
                                 schedule=schedule_text,  # Hiển thị đúng
                                 max_students=20, course_id=course.id,
                                 teacher_id=teacher.id, start_date=start_date,
-                                time_slot_id=chosen_slot.id)  # ID Logic đúng
+                                time_slot_id=chosen_slot.id)
 
                     db.session.add(cls)
                     db.session.commit()
@@ -169,18 +169,15 @@ def init_data():
 
 def enroll(user, cls):
     try:
-        # Tạo hóa đơn
         r = Receipt(user_id=user.id, is_paid=True)
         db.session.add(r)
         db.session.commit()
         db.session.add(ReceiptDetails(receipt_id=r.id, class_id=cls.id, price=cls.course.price))
 
-        # Tạo bảng điểm
         g = Grade(student_id=user.id, class_id=cls.id)
         db.session.add(g)
         db.session.commit()
 
-        # Nhập điểm chi tiết
         cols = GradeColumn.query.filter_by(class_id=cls.id).all()
         total, total_w = 0, 0
         for col in cols:
@@ -189,7 +186,6 @@ def enroll(user, cls):
             total += val * col.weight
             total_w += col.weight
 
-        # Tính điểm tổng
         if total_w > 0:
             g.final_average = round(total / total_w * 10, 1) if total_w <= 10 else round(total / total_w, 1)
             if total_w == 100:  # Trường hợp weight cộng lại bằng 100
