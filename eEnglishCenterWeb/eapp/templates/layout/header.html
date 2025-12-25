@@ -49,9 +49,15 @@
                     <span>{{ current_user.name.split()[-1] }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-4 mt-2">
+                    <li>
+                        <a class="dropdown-item py-2" href="/profile">
+                            <i class="fas fa-id-badge me-2 text-muted"></i> Hồ sơ cá nhân
+                        </a>
+                     </li>
                     {% if current_user.user_role.name in ['ADMIN', 'TEACHER','STAFF'] %}
                     <li><a class="dropdown-item py-2" href="/admin"><i class="fas fa-cogs me-2 text-muted"></i> Quản trị</a></li>
                     {% endif %}
+
                     <li><a class="dropdown-item py-2" href="/my-grades"><i class="fas fa-chart-pie me-2 text-muted"></i> Điểm số</a></li>
                     <li><a class="dropdown-item" href="/my-registrations"><i class="fas fa-history me-2"></i> Lịch sử đăng ký</a></li>
                     <li><hr class="dropdown-divider"></li>

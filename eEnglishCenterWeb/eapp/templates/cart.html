@@ -53,10 +53,7 @@
                     <strong class="fs-4 text-danger cart-amount">{{ "{:,.0f}".format(cart_stats.total_amount)}} VNĐ</strong>
                 </div>
                 <div class="card bg-light border-0 p-3">
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="fs-5">Tổng tiền:</span>
-                        <strong class="fs-4 text-danger cart-amount">{{ "{:,.0f}".format(cart_stats.total_amount)}} VNĐ</strong>
-                    </div>
+
 
                     {% if current_user.is_authenticated %}
                         <div class="mb-3">

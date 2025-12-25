@@ -30,6 +30,37 @@ def student_grades_view():
 @app.route('/cart')
 def cart_view():
     return render_template("cart.html")
+@app.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html')
+
+
+@app.route('/profile/change-password', methods=['POST'])
+@login_required
+def change_password():
+    old_pass = request.form.get('old_password')
+    new_pass = request.form.get('new_password')
+    confirm_pass = request.form.get('confirm_password')
+
+    # Mã hóa mật khẩu cũ để kiểm tra
+    old_pass_hash = hashlib.md5(old_pass.strip().encode('utf-8')).hexdigest()
+
+    if old_pass_hash != current_user.password:
+        return render_template('profile.html', msg="Mật khẩu hiện tại không đúng!", type="danger")
+
+    if new_pass != confirm_pass:
+        return render_template('profile.html', msg="Mật khẩu nhập lại không khớp!", type="danger")
+
+    if len(new_pass) < 6:
+        return render_template('profile.html', msg="Mật khẩu mới quá ngắn (tối thiểu 6 ký tự)!", type="warning")
+
+    # Cập nhật mật khẩu mới
+    new_pass_hash = hashlib.md5(new_pass.strip().encode('utf-8')).hexdigest()
+    current_user.password = new_pass_hash
+    db.session.commit()
+
+    return render_template('profile.html', msg="Đổi mật khẩu thành công!", type="success")
 @app.route('/api/carts/<id>',  methods=['put'])
 def update_to_cart(id):
     cart= session.get('cart')

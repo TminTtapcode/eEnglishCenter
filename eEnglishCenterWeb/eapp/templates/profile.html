@@ -1,0 +1,75 @@
+{% extends 'layout/base.html' %}
+
+{% block title %} Hồ sơ cá nhân {% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow border-0 rounded-4 text-center p-4 h-100">
+                <div class="mb-3 position-relative d-inline-block">
+                    <img src="{{ current_user.avatar }}" class="rounded-circle object-fit-cover border border-4 border-danger" 
+                         width="160" height="160" alt="Avatar" style="padding: 3px;">
+                </div>
+                
+                <h4 class="fw-bold text-primary mb-1">{{ current_user.name }}</h4>
+                <p class="text-muted fw-bold mb-2">@{{ current_user.username }}</p>
+                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill mb-3">
+                    {{ current_user.user_role.name }}
+                </span>
+                
+                <div class="text-start px-3 mt-3 pt-3 border-top">
+                    <p class="mb-2"><i class="fas fa-envelope text-danger me-2" style="width:20px"></i> {{ current_user.email }}</p>
+                    <p class="mb-2"><i class="fas fa-phone text-danger me-2" style="width:20px"></i> {{ current_user.phone }}</p>
+                    <p class="mb-0"><i class="fas fa-calendar-alt text-danger me-2" style="width:20px"></i> Tham gia: {{ current_user.id * 2 + 2020 }}</p>
+                </div>
+                
+                <a href="/my-grades" class="btn btn-outline-danger w-100 rounded-pill mt-4 fw-bold">
+                    <i class="fas fa-graduation-cap me-2"></i> Xem Bảng Điểm
+                </a>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow border-0 rounded-4 h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-key me-2"></i> Đổi Mật Khẩu</h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if msg %}
+                        <div class="alert alert-{{ type }} rounded-3 shadow-sm mb-4">
+                            <i class="fas fa-info-circle me-1"></i> {{ msg }}
+                        </div>
+                    {% endif %}
+
+                    <form method="post" action="/profile/change-password">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-secondary">Mật khẩu hiện tại</label>
+                            <input type="password" name="old_password" class="form-control bg-light py-2" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold text-secondary">Mật khẩu mới</label>
+                                <input type="password" name="new_password" class="form-control bg-light py-2" required>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-bold text-secondary">Nhập lại mật khẩu mới</label>
+                                <input type="password" name="confirm_password" class="form-control bg-light py-2" required>
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary rounded-pill fw-bold py-2 shadow-sm">
+                                <i class="fas fa-save me-2"></i> CẬP NHẬT MẬT KHẨU
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4 pt-3 border-top text-muted small">
+                        <i class="fas fa-shield-alt me-1"></i> Mật khẩu nên có ít nhất 6 ký tự để đảm bảo an toàn.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
