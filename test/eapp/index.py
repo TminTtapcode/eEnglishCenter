@@ -90,7 +90,7 @@ def reginter_process():
 def logout_process():
     logout_user()
     return redirect("/login")
-@app.route('/login', methods=['post'])
+
 # Trong eapp/index.py
 
 @app.route('/login', methods=['post'])
@@ -121,6 +121,10 @@ def load_user(id):
     return dao.get_user_by_id(id)
 
 
+# eapp/index.py
+
+# eapp/index.py
+
 @app.route("/api/carts", methods=['post'])
 def add_to_cart():
     # 1. Khởi tạo giỏ hàng
@@ -128,40 +132,38 @@ def add_to_cart():
     if not cart:
         cart = {}
 
-    # 2. Lấy dữ liệu từ Request
+    # 2. Lấy dữ liệu
     data = request.json
     class_id = str(data.get('id'))
     student_name = data.get('student_name')
-    student_phone = data.get('student_phone')
 
-    # 3. Lấy thông tin lớp học từ DB để check lịch
+    # 3. Lấy thông tin lớp
     new_class = Class.query.get(class_id)
     if not new_class:
         return jsonify({'error': 'Lớp học không tồn tại!'}), 404
 
-    # --- LOGIC KIỂM TRA MỚI ---
-
-    # Check 1: Đã có trong giỏ chưa?
+    # Check 1: Đã có chính lớp này trong giỏ chưa?
     if class_id in cart:
-        return jsonify({'error': 'Lớp này đã có trong giỏ hàng!'}), 400
+        return jsonify({'error': 'Lớp này đã có trong giỏ hàng rồi!'}), 400
 
-    # Check 2: Có trùng lịch với các lớp ĐANG HỌC không? (Chỉ check nếu đã đăng nhập)
-    if current_user.is_authenticated:
-        # Gọi hàm check_conflict từ utils.py
-        is_conflict = utils.check_conflict(new_class.time_slot_id, current_user.id)
-        if is_conflict:
-            return jsonify({'error': f'TRÙNG LỊCH HỌC! Bạn bị vướng lịch vào khung giờ: {new_class.time_slot}'}), 400
+    # --- LOGIC KIỂM TRA MỚI (Đã sửa) ---
+    user_id = current_user.id if current_user.is_authenticated else None
 
-    # --------------------------
+    # Truyền new_class.id thay vì time_slot_id
+    is_conflict, msg = utils.check_conflict(new_class.id, user_id, cart)
 
-    # 4. Thêm vào giỏ (nếu không trùng)
+    if is_conflict:
+        return jsonify({'error': msg}), 400
+        # -----------------------------------
+
+    # 4. Thêm vào giỏ (Thành công)
     cart[class_id] = {
         'id': class_id,
-        'name': new_class.name,  # Lấy name chuẩn từ DB
+        'name': new_class.name,
         'price': new_class.course.price,
         'quantity': 1,
         'student_name': student_name,
-        'student_phone': student_phone
+        'schedule': new_class.schedule  # <--- THÊM DÒNG NÀY (Lưu lịch học vào session)
     }
 
     session['cart'] = cart
@@ -171,7 +173,9 @@ def add_to_cart():
 @login_required
 def pay():
     try:
-        dao.add_receipt(session.get('cart'))
+        data = request.json
+        method = data.get('payment_method', 'online')  # Mặc định là online nếu không có
+        dao.add_receipt(session.get('cart'), payment_method=method)
         current_cart = session.get('cart')
         if current_cart:
             utils.send_payment_confirmation(
@@ -187,6 +191,55 @@ def pay():
         return jsonify({'status':201})
 
 
+# eapp/index.py
+
+@app.route('/api/cancel-receipt/<int:receipt_id>', methods=['POST'])
+@login_required
+def cancel_receipt(receipt_id):
+    from eapp.Models import Receipt, ReceiptDetails, Grade
+
+    # 1. Tìm hóa đơn
+    r = Receipt.query.get(receipt_id)
+
+    # 2. Kiểm tra quyền sở hữu (Phải đúng là hóa đơn của user đang đăng nhập)
+    if not r or r.user_id != current_user.id:
+        return jsonify({'status': 403, 'msg': 'Bạn không có quyền truy cập hóa đơn này!'})
+
+    # 3. CHỐT CHẶN QUAN TRỌNG: Đã thanh toán thì KHÔNG ĐƯỢC HỦY
+    if r.is_paid:
+        return jsonify({'status': 400, 'msg': 'Hóa đơn đã thanh toán. Không thể hủy!'})
+
+    try:
+        # 4. Logic Xóa: Xóa bảng điểm (Grade) trước để nhả chỗ trong lớp
+        # (Vì Receipt xóa sẽ kéo theo ReceiptDetails xóa, nhưng Grade thì không tự mất)
+        details = ReceiptDetails.query.filter_by(receipt_id=r.id).all()
+        for d in details:
+            g = Grade.query.filter_by(student_id=current_user.id, class_id=d.class_id).first()
+            if g:
+                db.session.delete(g)
+
+        # 5. Xóa hóa đơn
+        db.session.delete(r)
+        db.session.commit()
+
+        return jsonify({'status': 200, 'msg': 'Đã hủy đăng ký thành công!'})
+
+    except Exception as ex:
+        db.session.rollback()
+        return jsonify({'status': 500, 'msg': str(ex)})
+
+
+# eapp/index.py
+
+@app.route('/my-registrations')
+@login_required
+def my_registrations():
+    # Lấy danh sách hóa đơn của user, sắp xếp mới nhất lên đầu
+    from eapp.Models import Receipt
+    receipts = Receipt.query.filter_by(user_id=current_user.id) \
+        .order_by(Receipt.created_date.desc()).all()
+
+    return render_template('my_registrations.html', receipts=receipts)
 @app.context_processor
 def common_responeses():
     return {

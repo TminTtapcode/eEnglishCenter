@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, text
 from eapp import app, db
 # Import đầy đủ các Model
 from eapp.Models import User, Category, Course, Class, UserRole, Grade, GradeColumn, GradeScore, Receipt, \
-    ReceiptDetails, Attendance,TimeSlot
+    ReceiptDetails, Attendance, TimeSlot
 
 # 1. CẤU HÌNH
 DB_URI = app.config["SQLALCHEMY_DATABASE_URI"]
@@ -13,19 +13,19 @@ DB_URI = app.config["SQLALCHEMY_DATABASE_URI"]
 # Danh sách ảnh đẹp cho khóa học
 IMAGES = {
     'Beginner': [
-        "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800",  # Sách vở
-        "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800",  # Học tập
-        "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800"  # Bút viết
+        "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800",
+        "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800",
+        "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800"
     ],
     'Intermediate': [
-        "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800",  # Nhóm bạn
-        "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800",  # Lớp học
-        "https://images.unsplash.com/photo-1513258496098-882605922721?w=800"  # Bảng đen
+        "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800",
+        "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800",
+        "https://images.unsplash.com/photo-1513258496098-882605922721?w=800"
     ],
     'Advanced': [
-        "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800",  # Họp nhóm
-        "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=800",  # Hội thảo
-        "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800"  # Teamwork
+        "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800",
+        "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=800",
+        "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800"
     ]
 }
 
@@ -46,9 +46,9 @@ def clean_database():
         conn.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
         conn.commit()
         # Xóa tất cả các bảng liên quan
-        tables = ['grade_score', 'grade_column', 'grade_structure', 'grade',
+        tables = ['grade_score', 'grade_column', 'grade_summary', 'grade',
                   'attendance', 'receipt_details', 'receipt',
-                  'class', 'course', 'category', 'user']
+                  'class', 'course', 'category', 'user', 'time_slot']  # Thêm time_slot vào để xóa sạch
         for t in tables:
             conn.execute(text(f"DROP TABLE IF EXISTS {t}"))
 
@@ -68,18 +68,38 @@ def init_data():
         admin = User(name='Super Admin', username='admin', password=pw, user_role=UserRole.ADMIN)
         teachers = [
             User(name='Ms. Lan Anh', username='teacher1', password=pw, user_role=UserRole.TEACHER),
-            User(name='Mr. David M.', username='teacher2', password=pw, user_role=UserRole.TEACHER)
+            User(name='Mr. David M.', username='teacher2', password=pw, user_role=UserRole.TEACHER),
+
         ]
+        staff = User(name='Le Thu Ngan', username='staff', password=pw,user_role=UserRole.STAFF, avatar='https://i.pravatar.cc/s150?img=9')
         db.session.add(admin)
         db.session.add_all(teachers)
+        db.session.add(staff)
+
         db.session.commit()
-        slots = [
+
+        # --- TẠO TIME SLOTS ĐA DẠNG ---
+        # Tạo nhiều khung giờ để test tính năng trùng lịch
+        slots_data = [
+            # Ca 2-4-6
             TimeSlot(name="Sáng 2-4-6", days="2-4-6", start_time=8, end_time=10),
+            TimeSlot(name="Chiều 2-4-6", days="2-4-6", start_time=14, end_time=16),
+            TimeSlot(name="Tối 2-4-6", days="2-4-6", start_time=19, end_time=21),
+
+            # Ca 3-5-7
+            TimeSlot(name="Sáng 3-5-7", days="3-5-7", start_time=8, end_time=10),
+            TimeSlot(name="Chiều 3-5-7", days="3-5-7", start_time=14, end_time=16),
             TimeSlot(name="Tối 3-5-7", days="3-5-7", start_time=19, end_time=21),
-            TimeSlot(name="Cuối Tuần", days="7-8", start_time=8, end_time=11)  # 8 là CN
+
+            # Cuối tuần
+            TimeSlot(name="Sáng CN", days="8", start_time=8, end_time=11)
         ]
-        db.session.add_all(slots)
+        db.session.add_all(slots_data)
         db.session.commit()
+
+        # Reload lại slots để lấy ID
+        slots = TimeSlot.query.all()
+
         # --- Tạo 100 User ---
         users = []
         for i in range(1, 101):
@@ -114,16 +134,24 @@ def init_data():
                 db.session.add(course)
                 db.session.commit()
 
-                # Tạo 1-2 lớp cho mỗi khóa
-                for k in range(random.randint(1, 2)):
+                # Tạo 2 lớp cho mỗi khóa với TimeSlot NGẪU NHIÊN
+                for k in range(2):
                     teacher = random.choice(teachers)
                     start_date = datetime.now().date() + timedelta(days=random.randint(-30, 30))
 
+                    # --- ĐÂY LÀ ĐIỂM SỬA QUAN TRỌNG ---
+                    # Chọn ngẫu nhiên 1 TimeSlot thực tế
+                    chosen_slot = random.choice(slots)
+
+                    # Tạo tên lịch học hiển thị khớp với TimeSlot đã chọn
+                    schedule_text = f"{chosen_slot.days} ({chosen_slot.start_time}h-{chosen_slot.end_time}h)"
+
                     cls = Class(name=f"{c_name} - Lớp {k + 1}",
-                                schedule=random.choice(['2-4-6 (19h-21h)', '3-5-7 (18h-20h)']),
+                                schedule=schedule_text,  # Hiển thị đúng
                                 max_students=20, course_id=course.id,
                                 teacher_id=teacher.id, start_date=start_date,
-                                time_slot_id=slots[0].id)
+                                time_slot_id=chosen_slot.id)  # ID Logic đúng
+
                     db.session.add(cls)
                     db.session.commit()
                     all_classes.append(cls)
@@ -139,7 +167,6 @@ def init_data():
         db.session.commit()
 
         # --- Xử lý Lớp FULL chỗ ---
-        # Lấy lớp đầu tiên làm lớp Full
         full_class = all_classes[0]
         full_class.name = f"{full_class.name} (FULL)"
         full_class.max_students = 10
@@ -153,13 +180,11 @@ def init_data():
             enroll(users[i], full_class)
 
         # --- Đăng ký ngẫu nhiên cho các lớp còn lại ---
-        # 90 user còn lại, mỗi người học random 0-2 lớp
         remaining_users = users[10:]
         remaining_classes = all_classes[1:]
 
         for u in remaining_users:
             if random.random() > 0.3:  # 70% có đi học
-                # Chọn ngẫu nhiên 1 lớp
                 cls = random.choice(remaining_classes)
                 enroll(u, cls)
 
@@ -191,9 +216,9 @@ def enroll(user, cls):
 
         # Tính điểm tổng
         if total_w > 0:
-            g.final_average = round(total / total_w * 10, 1)  # Quy về thang 10
-            # Hoặc nếu nhập weight là 30, 70 thì chia 100
-            g.final_average = round(total / 100, 1)
+            g.final_average = round(total / total_w * 10, 1) if total_w <= 10 else round(total / total_w, 1)
+            if total_w == 100:  # Trường hợp weight cộng lại bằng 100
+                g.final_average = round(total / 100, 1)
 
         db.session.commit()
     except Exception:

@@ -12,6 +12,7 @@
                 <tr>
                     <th>Mã Lớp</th>
                     <th>Tên Lớp Học</th>
+                    <th>Lịch Học</th>
                     <th>Học Phí</th>
                     <th class="text-center">Xóa</th>
                 </tr>
@@ -23,6 +24,11 @@
                 <td>
                     <div class="fw-bold text-primary">{{c.name}}</div>
                 </td>
+                <td>
+                    <span class="badge bg-info text-dark">
+                        <i class="fas fa-calendar-alt me-1"></i> {{ c.schedule }}
+                     </span>
+                 </td>
                 <td class="fw-bold text-danger">{{"{:,.0f}".format(c.price)}} VNĐ</td>
                 <td class="text-center">
                     <button class="btn btn-outline-danger btn-sm" onclick="deleteCart({{c.id}})">
@@ -46,7 +52,30 @@
                     <span class="fs-5">Tổng tiền:</span>
                     <strong class="fs-4 text-danger cart-amount">{{ "{:,.0f}".format(cart_stats.total_amount)}} VNĐ</strong>
                 </div>
+                <div class="card bg-light border-0 p-3">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="fs-5">Tổng tiền:</span>
+                        <strong class="fs-4 text-danger cart-amount">{{ "{:,.0f}".format(cart_stats.total_amount)}} VNĐ</strong>
+                    </div>
 
+                    {% if current_user.is_authenticated %}
+                        <div class="mb-3">
+                            <label class="fw-bold mb-2">Hình thức thanh toán:</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="payOnline" value="online" checked>
+                                <label class="form-check-label" for="payOnline">
+                                    <i class="fas fa-university text-primary"></i> Chuyển khoản ngân hàng (Giả lập)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="payOffline" value="offline">
+                                <label class="form-check-label" for="payOffline">
+                                    <i class="fas fa-money-bill-wave text-success"></i> Thanh toán tại trung tâm
+                                </label>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
                 {%if current_user.is_authenticated%}
                     <button class="btn btn-success w-100 py-2 fw-bold" onclick="pay()">
                         <i class="fas fa-credit-card"></i> THANH TOÁN & NHẬP HỌC

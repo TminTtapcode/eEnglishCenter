@@ -129,36 +129,93 @@ def stats_cart(cart):
 
 # eapp/utils.py
 
-def check_conflict(new_slot_id, current_user_id):
+# eapp/utils.py
+
+# eapp/utils.py
+
+# eapp/utils.py
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+
+
+# ... (Các hàm gửi mail giữ nguyên) ...
+
+def stats_cart(cart):
+    total_quantity, total_amount = 0, 0
+    if cart:
+        for c in cart.values():
+            total_quantity += c['quantity']
+            total_amount += c['quantity'] * c['price']
+    return {
+        "total_quantity": total_quantity,
+        "total_amount": total_amount
+    }
+
+
+def check_conflict(new_class_id, current_user_id, cart=None):
     """
-    Kiểm tra xem Ca học mới (new_slot_id) có trùng với các lớp
-    mà User đang học không.
+    Kiểm tra xung đột toàn diện:
+    1. Trùng Môn (Đã học môn này rồi -> Không đăng ký lại lớp khác cùng môn).
+    2. Trùng Lịch (Trùng ngày giờ với lớp đang học hoặc lớp trong giỏ).
     """
     from eapp import db
     from eapp.Models import TimeSlot, Class, Grade
 
-    # 1. Lấy thông tin ca mới
-    new_slot = TimeSlot.query.get(new_slot_id)
-    if not new_slot: return False
+    # 1. Lấy thông tin Lớp mới và Ca học mới
+    new_class = Class.query.get(new_class_id)
+    if not new_class: return True, "Lớp học không tồn tại"
 
-    new_days_set = set(new_slot.days.split('-'))  # VD: {'2','4','6'}
+    new_slot = new_class.time_slot
+    new_days_set = set([d.strip() for d in new_slot.days.split('-') if d.strip()])
+    n_start = int(new_slot.start_time)
+    n_end = int(new_slot.end_time)
 
-    # 2. Lấy danh sách Ca học của các lớp user đang học
-    active_slots = db.session.query(TimeSlot) \
-        .join(Class).join(Grade) \
-        .filter(Grade.student_id == current_user_id, Class.is_finished == False) \
-        .all()
+    # Danh sách các lớp cần kiểm tra (Gồm lớp trong DB và lớp trong Cart)
+    busy_list = []
 
-    # 3. So sánh
-    for slot in active_slots:
+    # A. Lấy từ Database (Các lớp ĐANG HỌC)
+    if current_user_id:
+        db_classes = db.session.query(Class) \
+            .join(Grade) \
+            .filter(Grade.student_id == current_user_id, Class.is_finished == False) \
+            .all()
+        for c in db_classes:
+            busy_list.append({'class': c, 'source': 'Lớp đang học'})
+
+    # B. Lấy từ Giỏ hàng (Các lớp ĐANG CHỌN)
+    if cart:
+        for item in cart.values():
+            # item['id'] là ID của lớp
+            cart_c = Class.query.get(int(item['id']))
+            if cart_c and cart_c.id != new_class.id:  # Không so sánh với chính nó
+                busy_list.append({'class': cart_c, 'source': 'Lớp trong giỏ'})
+
+    # --- BẮT ĐẦU KIỂM TRA ---
+    for item in busy_list:
+        busy_class = item['class']
+        source = item['source']
+
+        # 1. KIỂM TRA TRÙNG KHÓA HỌC (Cùng Course ID)
+        if busy_class.course_id == new_class.course_id:
+            return True, f"Xung đột: Bạn đã đăng ký khóa '{busy_class.course.name}' ở lớp '{busy_class.name}' ({source}) rồi."
+
+        # 2. KIỂM TRA TRÙNG LỊCH HỌC
+        slot = busy_class.time_slot
+
         # a. Check trùng ngày
-        old_days_set = set(slot.days.split('-'))
-        if not new_days_set.intersection(old_days_set):
-            continue  # Không trùng ngày -> Bỏ qua
+        old_days_set = set([d.strip() for d in slot.days.split('-') if d.strip()])
+        common_days = new_days_set.intersection(old_days_set)
 
-        # b. Check trùng giờ (Công thức giao nhau)
-        # (Start A < End B) và (Start B < End A)
-        if (new_slot.start_time < slot.end_time) and (slot.start_time < new_slot.end_time):
-            return True  # TRÙNG!
+        if not common_days:
+            continue  # Không trùng ngày -> Bỏ qua check giờ
 
-    return False
+        # b. Check trùng giờ (Giao nhau)
+        o_start = int(slot.start_time)
+        o_end = int(slot.end_time)
+
+        # Công thức giao nhau: (Start A < End B) AND (Start B < End A)
+        if (n_start < o_end) and (o_start < n_end):
+            return True, f"Trùng lịch: Giờ học {new_slot.name} bị trùng với lớp '{busy_class.name}' ({source})."
+
+    return False, None

@@ -75,10 +75,11 @@ def count_course_by_cate():
 
 # --- CÁC HÀM XỬ LÝ NGHIỆP VỤ MỚI ---
 
-def add_receipt(cart):
+def add_receipt(cart,payment_method='online'):
     if cart:
         try:
-            r = Receipt(user=current_user, is_paid=True)
+            paid_status = True if payment_method == 'online' else False
+            r = Receipt(user=current_user, is_paid=paid_status)
             db.session.add(r)
 
             for c in cart.values():
@@ -101,21 +102,17 @@ def add_receipt(cart):
                     raise Exception(f"Bạn đã có tên trong lớp {study_class.name} rồi!")
 
                 # 3. Kiểm tra: Học viên đã học Khóa này ở lớp khác chưa? (Tránh trùng khóa)
-                joined_course = db.session.query(Grade).join(Class) \
-                    .filter(Grade.student_id == current_user.id,
-                            Class.course_id == study_class.course_id).first()
+                if study_class:
+                    d = ReceiptDetails(receipt=r, class_id=class_id, quantity=1, price=study_class.course.price)
+                    db.session.add(d)
 
-                if joined_course:
-                    raise Exception(
-                        f"Bạn đã đăng ký khóa '{study_class.course.name}' rồi (Lớp: {joined_course.study_class.name}).")
+                    # QUAN TRỌNG:
+                    # Nếu chưa thanh toán (Offline), có cho vào lớp luôn không?
+                    # Thường là VẪN CHO vào danh sách lớp nhưng đánh dấu nợ,
+                    # hoặc tạo bảng điểm (Grade) bình thường.
 
-                # Thêm chi tiết hóa đơn
-                d = ReceiptDetails(receipt=r, class_id=class_id, quantity=1, price=study_class.course.price)
-                db.session.add(d)
-
-                # Ghi danh vào lớp (Tạo bảng điểm rỗng)
-                g = Grade(student_id=current_user.id, class_id=class_id)
-                db.session.add(g)
+                    g = Grade(student_id=current_user.id, class_id=class_id)
+                    db.session.add(g)
                 db.session.flush()
                 from eapp.Models import GradeScore
                 for col in study_class.grade_columns:
@@ -187,14 +184,6 @@ def stats_revenue_style_course(kw=None):
 
     return query.group_by(Course.id).all()
 
-
-def stats_revenue_style_time(time='month', year=datetime.now().year):
-    return db.session.query(func.extract('month', Receipt.created_date),
-                            func.sum(ReceiptDetails.quantity * ReceiptDetails.price)) \
-        .join(ReceiptDetails, ReceiptDetails.receipt_id == Receipt.id) \
-        .filter(func.extract('year', Receipt.created_date) == year) \
-        .filter(Receipt.is_paid == True) \
-        .group_by(func.extract('month', Receipt.created_date)).all()
 def get_revenue_years():
     # Lấy ra các năm duy nhất từ bảng Receipt
     return db.session.query(func.extract('year', Receipt.created_date))\

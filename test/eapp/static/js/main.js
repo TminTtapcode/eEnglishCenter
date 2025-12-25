@@ -58,9 +58,19 @@ function deleteCart(id) {
 
 /* 3. Hàm Thanh Toán */
 function pay() {
-    if (confirm("Xác nhận đăng ký các lớp học này cho TÀI KHOẢN CỦA BẠN?") == true) {
+    // Lấy giá trị radio button đang chọn
+    let method = document.querySelector('input[name="paymentMethod"]:checked').value;
+
+    let msg = method === 'online'
+        ? "Bạn chọn chuyển khoản. Hệ thống sẽ ghi nhận ĐÃ THANH TOÁN ngay lập tức?"
+        : "Bạn chọn nộp tiền tại trung tâm. Đăng ký sẽ ở trạng thái CHỜ THANH TOÁN?";
+
+    if (confirm(msg) == true) {
         fetch('/api/pay', {
             method: 'post',
+            body: JSON.stringify({
+                'payment_method': method // Gửi kèm phương thức
+            }),
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -68,14 +78,13 @@ function pay() {
             return res.json();
         }).then(function(data) {
             if (data.status === 201) {
-                alert("Đăng ký thành công! Chào mừng bạn.");
-                window.location.href = "/"; // Về trang chủ
+                alert("Đăng ký thành công! Vui lòng kiểm tra email.");
+                window.location.href = "/";
             } else {
                 alert("LỖI: " + data.err_msg);
             }
         }).catch(function(err) {
             console.error(err);
-            alert("Lỗi hệ thống.");
         });
     }
 }

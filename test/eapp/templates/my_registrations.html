@@ -1,0 +1,92 @@
+{% extends 'layout/base.html' %}
+
+{% block title %} Lịch sử đăng ký {% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="card shadow border-0 rounded-4">
+        <div class="card-header bg-primary text-white py-3">
+            <h4 class="mb-0 fw-bold text-center text-uppercase"><i class="fas fa-history"></i> Lịch Sử Đăng Ký</h4>
+        </div>
+        <div class="card-body">
+            {% if receipts %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Mã HĐ</th>
+                            <th>Ngày đăng ký</th>
+                            <th>Chi tiết lớp học</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in receipts %}
+                        <tr>
+                            <td>#{{ r.id }}</td>
+                            <td>{{ r.created_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <ul class="mb-0 ps-3 small text-muted">
+                                    {% for d in r.details %}
+                                        <li>{{ d.study_class.name }} ({{ d.study_class.course.name }})</li>
+                                    {% endfor %}
+                                </ul>
+                            </td>
+                            <td class="fw-bold text-primary">{{ "{:,.0f}".format(r.total_amount) }}đ</td>
+                            
+                            <td>
+                                {% if r.is_paid %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check-circle"></i> Đã thanh toán</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark rounded-pill"><i class="fas fa-clock"></i> Chờ thanh toán</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                {% if not r.is_paid %} 
+                                    <button class="btn btn-outline-danger btn-sm rounded-pill fw-bold" onclick="cancelReceipt({{ r.id }})">
+                                        <i class="fas fa-times"></i> Hủy
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-light btn-sm rounded-pill text-muted" disabled>
+                                        <i class=\"fas fa-lock\"></i> Không thể hủy
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2038/2038854.png" width="80" class="mb-3 opacity-50">
+                    <h5 class="text-muted">Bạn chưa có lịch sử đăng ký nào.</h5>
+                    <a href="/" class="btn btn-primary mt-3 rounded-pill">Đăng ký ngay</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function cancelReceipt(id) {
+    if(confirm("Bạn có chắc muốn HỦY đơn đăng ký này? Chỗ ngồi của bạn sẽ bị mất.") == true) {
+        fetch('/api/cancel-receipt/' + id, {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status == 200) {
+                alert(data.msg);
+                location.reload();
+            } else {
+                alert("Lỗi: " + data.msg);
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

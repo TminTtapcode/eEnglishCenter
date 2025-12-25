@@ -1,88 +1,80 @@
 {% extends 'layout/base.html' %}
 
-{% block title %} Kết Quả Học Tập {% endblock %}
+{% block title %} Kết quả học tập {% endblock %}
 
 {% block content %}
 <div class="container mt-5 mb-5">
-    <div class="card shadow border-0">
-        <div class="card-header bg-primary text-white text-center py-3">
-            <h3 class="mb-0 fw-bold"><i class="fas fa-graduation-cap"></i> BẢNG ĐIỂM CÁ NHÂN</h3>
+    <div class="card shadow border-0 rounded-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h4 class="mb-0 fw-bold text-primary text-uppercase text-center">
+                <i class="fas fa-graduation-cap"></i> Bảng Điểm Cá Nhân
+            </h4>
         </div>
-
-        <div class="card-body bg-light">
-            <div class="alert alert-white shadow-sm border mb-4 d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>Học viên:</strong> {{ current_user.name }} <br>
-                    <strong>Mã HV:</strong> {{ current_user.username }}
-                </div>
-                <div class="text-end text-muted small">
-                    <i class="fas fa-info-circle"></i> Điểm trung bình được tính theo hệ số (Trọng số).
-                </div>
-            </div>
-
-            {% if current_user.grades %}
-                <div class="row">
-                    {% for g in current_user.grades %}
-                    <div class="col-md-6 mb-4">
-                        <div class="card h-100 shadow-sm border-0">
-                            <div class="card-header bg-white d-flex justify-content-between align-items-center border-bottom">
-                                <div>
-                                    <h5 class="fw-bold text-primary mb-0">{{ g.study_class.course.name }}</h5>
-                                    <small class="text-muted">{{ g.study_class.name }}</small>
+        <div class="card-body p-0">
+            {% if grades %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-secondary">
+                        <tr>
+                            <th class="ps-4">Lớp Học</th>
+                            <th>Lịch Học</th>
+                            <th>Chi Tiết Điểm</th> <th class="text-center">Trung Bình</th>
+                            <th class="text-center">Kết Quả</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in grades %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">{{ g.study_class.name }}</div>
+                                <div class="small text-muted">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                    {{ g.study_class.teacher.name if g.study_class.teacher else 'Chưa phân công' }}
                                 </div>
-                                <div class="text-end">
-                                    <div class="display-6 fw-bold {{ 'text-success' if g.result == 'Đạt' else 'text-danger' }}">
-                                        {{ "{:.1f}".format(g.final_average) }}
-                                    </div>
-                                    <span class="badge {{ 'bg-success' if g.result == 'Đạt' else 'bg-danger' }}">
-                                        {{ g.result }}
-                                    </span>
-                                </div>
-                            </div>
+                            </td>
 
-                            <div class="card-body p-0">
-                                <table class="table table-striped mb-0">
-                                    <thead class="table-light small text-muted">
-                                        <tr>
-                                            <th class="ps-3">Đầu điểm</th>
-                                            <th class="text-center">Trọng số</th>
-                                            <th class="text-end pe-3">Điểm số</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% set ns = namespace(total_w=0) %}
+                            <td>
+                                <span class="badge bg-info text-dark border">
+                                    <i class="far fa-calendar-alt"></i> {{ g.study_class.schedule }}
+                                </span>
+                            </td>
 
+                            <td>
+                                {% if g.scores %}
+                                    <ul class="list-unstyled mb-0 small">
                                         {% for s in g.scores %}
-                                            {% set ns.total_w = ns.total_w + s.column_info.weight %}
-                                            <tr>
-                                                <td class="ps-3 fw-bold">{{ s.column_info.name }}</td>
-                                                <td class="text-center"><span class="badge bg-secondary">{{ s.column_info.weight }}</span></td>
-                                                <td class="text-end pe-3 fw-bold">{{ s.value }}</td>
-                                            </tr>
+                                        <li>
+                                            <span class="text-secondary">• {{ s.column_info.name }}:</span>
+                                            <span class="fw-bold text-dark">{{ s.value }}</span>
+                                            <span class="text-muted" style="font-size: 0.75rem;">({{ s.column_info.weight }}%)</span>
+                                        </li>
                                         {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <span class="text-muted small fst-italic">Chưa có điểm</span>
+                                {% endif %}
+                            </td>
 
-                                        {% if g.scores %}
-                                        <tr class="table-warning fst-italic small">
-                                            <td colspan="3" class="text-center text-muted">
-                                                Tổng trọng số hiện tại: <strong>{{ ns.total_w }}</strong> <br>
-                                                (Công thức: Tổng(Điểm x Trọng số) / {{ ns.total_w }})
-                                            </td>
-                                        </tr>
-                                        {% else %}
-                                        <tr><td colspan="3" class="text-center text-muted py-3">Chưa có điểm thành phần</td></tr>
-                                        {% endif %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+                            <td class="text-center">
+                                <div class="fw-bold fs-5 text-danger">{{ g.final_average }}</div>
+                            </td>
+
+                            <td class="text-center">
+                                {% if g.result == 'Đạt' %}
+                                    <span class="badge bg-success rounded-pill px-3">ĐẠT</span>
+                                {% else %}
+                                    <span class="badge bg-danger rounded-pill px-3">CHƯA ĐẠT</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-                <div class="text-center p-5">
-                    <img src="https://cdn-icons-png.flaticon.com/512/4076/4076432.png" width="80" class="mb-3 opacity-50">
-                    <h5 class="text-muted">Bạn chưa đăng ký lớp học nào.</h5>
-                    <a href="/" class="btn btn-primary mt-3 rounded-pill px-4">Đăng ký ngay</a>
+                <div class="text-center py-5">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2997/2997295.png" width="80" class="mb-3 opacity-50">
+                    <h5 class="text-muted">Bạn chưa có bảng điểm nào.</h5>
                 </div>
             {% endif %}
         </div>

@@ -12,7 +12,7 @@ class UserRole(UserEnum):
     USER = 1;
     ADMIN = 2;
     TEACHER = 3;
-    CASHIER = 4
+    STAFF = 4
 
 
 class BaseModel(db.Model):
@@ -129,6 +129,10 @@ class Receipt(BaseModel):
     is_paid = Column(Boolean, default=False)
     details = relationship('ReceiptDetails', backref='receipt', lazy=True)
 
+    @property
+    def total_amount(self):
+        # Tính tổng tiền từ các chi tiết hóa đơn
+        return sum([d.price * d.quantity for d in self.details]) if self.details else 0
 
 class ReceiptDetails(BaseModel):
     class_id = Column(Integer, ForeignKey(Class.id), nullable=False)
