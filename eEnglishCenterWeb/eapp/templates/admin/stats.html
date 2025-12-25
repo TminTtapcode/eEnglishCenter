@@ -99,7 +99,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 window.onload = function() {
-    // --- 1. BIỂU ĐỒ DOANH THU (Line) ---
     const ctxRev = document.getElementById('revenueChart');
     let labels = [], data = [];
     for(let i=1; i<=12; i++) { labels.push("Tháng " + i); data.push(0); }
@@ -133,12 +132,10 @@ window.onload = function() {
         }
     });
 
-    // --- 2. BIỂU ĐỒ HỌC VIÊN (Pie Chart - MỚI) ---
-    // Thay vì hiện bảng, ta vẽ biểu đồ tròn để thấy tỷ trọng
     const ctxStudent = document.getElementById('studentChart');
     {% if student_stats %}
     new Chart(ctxStudent, {
-        type: 'pie', // Dạng bánh Donut (hoặc đổi thành ' nếu thích tròn đặc)
+        type: 'pie',
         data: {
             labels: [{% for s in student_stats %} "{{s[0]}}", {% endfor %}],
             datasets: [{
@@ -159,7 +156,7 @@ window.onload = function() {
     });
     {% endif %}
 
-    // --- 3. BIỂU ĐỒ TỶ LỆ ĐẠT (Bar) ---
+
     const ctxPass = document.getElementById('passRateChart');
     {% if pass_stats %}
     new Chart(ctxPass, {

@@ -1,4 +1,3 @@
-# eapp/Models.py (Code chuẩn Dynamic)
 from sqlalchemy.orm import relationship
 from eapp import db
 from sqlalchemy import Column, Integer, String, Boolean, Float, Enum, ForeignKey, DateTime, Date, Index, \
@@ -58,14 +57,12 @@ class Course(BaseModel):
     def __str__(self): return self.name
 
 class TimeSlot(BaseModel):
-    name = Column(String(50), nullable=False)  # VD: "Ca Tối 2-4-6"
+    name = Column(String(50), nullable=False)
 
-    # Lưu tách biệt để dễ tính toán trùng lịch
-    days = Column(String(20), nullable=False)  # VD: "2-4-6"
-    start_time = Column(Integer, nullable=False)  # VD: 19 (19h)
-    end_time = Column(Integer, nullable=False)  # VD: 21 (21h)
+    days = Column(String(20), nullable=False)
+    start_time = Column(Integer, nullable=False)
+    end_time = Column(Integer, nullable=False)
 
-    # Quan hệ
     classes = relationship('Class', backref='time_slot', lazy=True)
 
     def __str__(self):
@@ -95,7 +92,6 @@ class Class(BaseModel):
     def __str__(self): return self.name
 
 
-# --- HỆ THỐNG ĐIỂM ĐỘNG ---
 class Grade(BaseModel):
     student_id = Column(Integer, ForeignKey(User.id), nullable=False)
     class_id = Column(Integer, ForeignKey(Class.id), nullable=False)
@@ -131,7 +127,6 @@ class Receipt(BaseModel):
 
     @property
     def total_amount(self):
-        # Tính tổng tiền từ các chi tiết hóa đơn
         return sum([d.price * d.quantity for d in self.details]) if self.details else 0
 
 class ReceiptDetails(BaseModel):

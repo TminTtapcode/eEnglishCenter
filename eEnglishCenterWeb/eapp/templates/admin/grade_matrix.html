@@ -96,17 +96,14 @@ document.addEventListener("DOMContentLoaded", function() {
     const inputs = document.querySelectorAll(".score-input");
 
     inputs.forEach(input => {
-        // Sự kiện: Khi rời chuột khỏi ô nhập (Blur) -> Lưu
         input.addEventListener("blur", function() { saveScore(this); });
 
-        // Sự kiện: Bấm Enter -> Cũng lưu
         input.addEventListener("keypress", function(e) {
             if (e.key === "Enter") { e.preventDefault(); this.blur(); }
         });
 
-        // Hiệu ứng Focus
         input.addEventListener("focus", function() {
-            this.style.backgroundColor = "#e8f0fe"; // Màu xanh nhạt khi nhập
+            this.style.backgroundColor = "#e8f0fe";
         });
         input.addEventListener("focusout", function() {
             if(this.value === "") this.style.backgroundColor = "transparent";
@@ -120,18 +117,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (val === "") { el.style.backgroundColor = "transparent"; return; }
 
-        // --- VALIDATION PHÍA CLIENT ---
         let numVal = parseFloat(val);
         if (numVal < 0 || numVal > 10) {
             alert("Lỗi: Điểm phải từ 0 đến 10!");
-            el.value = ""; // Xóa giá trị sai
+            el.value = "";
             el.style.backgroundColor = "#f8d7da"; // Báo đỏ
             el.focus();
             return;
         }
-        // -----------------------------
 
-        // Hiệu ứng đang lưu (chữ xám)
         el.style.color = "#999";
 
         fetch('/admin/grade_manager/update', {
@@ -145,16 +139,13 @@ document.addEventListener("DOMContentLoaded", function() {
             el.style.backgroundColor = "transparent";
 
             if(data.status === 'success') {
-                // Hiệu ứng thành công (Nháy xanh)
                 const parentTd = el.parentElement;
                 parentTd.style.backgroundColor = "#d4edda";
                 setTimeout(() => parentTd.style.backgroundColor = "transparent", 800);
 
-                // Cập nhật ngay TB và Kết quả
                 document.getElementById('avg-' + gradeId).innerText = data.new_avg;
                 const resSpan = document.getElementById('res-' + gradeId);
 
-                // Cập nhật Badge Đạt/Không đạt
                 if (data.new_res == 'Đạt') {
                     resSpan.innerHTML = '<span class="badge bg-success">Đạt</span>';
                 } else {

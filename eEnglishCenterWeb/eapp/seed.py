@@ -3,14 +3,11 @@ import hashlib
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text
 from eapp import app, db
-# Import đầy đủ các Model
 from eapp.Models import User, Category, Course, Class, UserRole, Grade, GradeColumn, GradeScore, Receipt, \
-    ReceiptDetails, Attendance, TimeSlot
+    ReceiptDetails, TimeSlot
 
-# 1. CẤU HÌNH
 DB_URI = app.config["SQLALCHEMY_DATABASE_URI"]
 
-# Danh sách ảnh đẹp cho khóa học
 IMAGES = {
     'Beginner': [
         "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800",
@@ -38,14 +35,12 @@ def generate_name():
     return f"{random.choice(HO)} {random.choice(TEN_LOT)} {random.choice(TEN)}"
 
 
-# 2. HÀM DỌN DẸP DB CŨ
 def clean_database():
     print("🧹 Đang dọn dẹp database cũ...")
     engine = create_engine(DB_URI)
     with engine.connect() as conn:
         conn.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
         conn.commit()
-        # Xóa tất cả các bảng liên quan
         tables = ['grade_score', 'grade_column', 'grade_summary', 'grade',
                   'attendance', 'receipt_details', 'receipt',
                   'class', 'course', 'category', 'user', 'time_slot']  # Thêm time_slot vào để xóa sạch
@@ -56,7 +51,6 @@ def clean_database():
         conn.commit()
 
 
-# 3. HÀM TẠO DỮ LIỆU
 def init_data():
     print("🚀 Đang khởi tạo dữ liệu mới...")
     with app.app_context():
@@ -64,7 +58,6 @@ def init_data():
 
         pw = hashlib.md5("123456".encode('utf-8')).hexdigest()
 
-        # --- Tạo Staff ---
         admin = User(name='Super Admin', username='admin', password=pw, user_role=UserRole.ADMIN)
         teachers = [
             User(name='Ms. Lan Anh', username='teacher1', password=pw, user_role=UserRole.TEACHER),
@@ -78,29 +71,22 @@ def init_data():
 
         db.session.commit()
 
-        # --- TẠO TIME SLOTS ĐA DẠNG ---
-        # Tạo nhiều khung giờ để test tính năng trùng lịch
         slots_data = [
-            # Ca 2-4-6
             TimeSlot(name="Sáng 2-4-6", days="2-4-6", start_time=8, end_time=10),
             TimeSlot(name="Chiều 2-4-6", days="2-4-6", start_time=14, end_time=16),
             TimeSlot(name="Tối 2-4-6", days="2-4-6", start_time=19, end_time=21),
 
-            # Ca 3-5-7
             TimeSlot(name="Sáng 3-5-7", days="3-5-7", start_time=8, end_time=10),
             TimeSlot(name="Chiều 3-5-7", days="3-5-7", start_time=14, end_time=16),
             TimeSlot(name="Tối 3-5-7", days="3-5-7", start_time=19, end_time=21),
 
-            # Cuối tuần
             TimeSlot(name="Sáng CN", days="8", start_time=8, end_time=11)
         ]
         db.session.add_all(slots_data)
         db.session.commit()
 
-        # Reload lại slots để lấy ID
         slots = TimeSlot.query.all()
 
-        # --- Tạo 100 User ---
         users = []
         for i in range(1, 101):
             u = User(name=generate_name(), username=f'user{i}', password=pw,
@@ -110,7 +96,6 @@ def init_data():
         db.session.commit()
         print(f"   - Đã tạo 100 học viên.")
 
-        # --- Tạo Danh mục & Khóa học & Lớp ---
         structure = {
             'Beginner': ['Tiếng Anh Mất Gốc', 'Phát Âm Cơ Bản', 'Từ Vựng Sơ Cấp'],
             'Intermediate': ['Giao Tiếp Phản Xạ', 'Ngữ Pháp Nâng Cao', 'Luyện Nghe Nói'],
@@ -125,7 +110,6 @@ def init_data():
             db.session.commit()
 
             for idx, c_name in enumerate(courses):
-                # Chọn ảnh
                 img_url = IMAGES[cat_name][idx % 3]
                 price = random.randint(10, 50) * 100000  # Giá từ 1tr - 5tr
 
@@ -134,16 +118,12 @@ def init_data():
                 db.session.add(course)
                 db.session.commit()
 
-                # Tạo 2 lớp cho mỗi khóa với TimeSlot NGẪU NHIÊN
                 for k in range(2):
                     teacher = random.choice(teachers)
                     start_date = datetime.now().date() + timedelta(days=random.randint(-30, 30))
 
-                    # --- ĐÂY LÀ ĐIỂM SỬA QUAN TRỌNG ---
-                    # Chọn ngẫu nhiên 1 TimeSlot thực tế
                     chosen_slot = random.choice(slots)
 
-                    # Tạo tên lịch học hiển thị khớp với TimeSlot đã chọn
                     schedule_text = f"{chosen_slot.days} ({chosen_slot.start_time}h-{chosen_slot.end_time}h)"
 
                     cls = Class(name=f"{c_name} - Lớp {k + 1}",
@@ -156,7 +136,6 @@ def init_data():
                     db.session.commit()
                     all_classes.append(cls)
 
-                    # Tạo Cấu trúc điểm (Dynamic)
                     cols = [
                         GradeColumn(name='Chuyên cần', weight=10, class_id=cls.id),
                         GradeColumn(name='Giữa kỳ', weight=30, class_id=cls.id),
@@ -166,7 +145,6 @@ def init_data():
 
         db.session.commit()
 
-        # --- Xử lý Lớp FULL chỗ ---
         full_class = all_classes[0]
         full_class.name = f"{full_class.name} (FULL)"
         full_class.max_students = 10
@@ -175,24 +153,21 @@ def init_data():
 
         print(f"   - Tạo lớp FULL: {full_class.name}")
 
-        # Đăng ký 10 người vào lớp Full
         for i in range(10):
             enroll(users[i], full_class)
 
-        # --- Đăng ký ngẫu nhiên cho các lớp còn lại ---
         remaining_users = users[10:]
         remaining_classes = all_classes[1:]
 
         for u in remaining_users:
-            if random.random() > 0.3:  # 70% có đi học
+            if random.random() > 0.3:
                 cls = random.choice(remaining_classes)
                 enroll(u, cls)
 
-        print("✅ KHỞI TẠO THÀNH CÔNG! (Admin: admin / 123456)")
+        print(" KHỞI TẠO THÀNH CÔNG! (Admin: admin / 123456)")
 
 
 def enroll(user, cls):
-    """Hàm đăng ký học và nhập điểm giả"""
     try:
         # Tạo hóa đơn
         r = Receipt(user_id=user.id, is_paid=True)

@@ -1,4 +1,3 @@
-# eapp/admin.py (Copy đè toàn bộ)
 from flask import request, jsonify, url_for, flash, redirect
 from markupsafe import Markup
 from flask_admin import Admin, BaseView, expose, AdminIndexView
@@ -8,17 +7,12 @@ from flask_login import current_user, logout_user
 from datetime import datetime,timedelta
 from eapp.Models import Course, UserRole, Category, User, Class, Grade, Attendance, GradeColumn, GradeScore, TimeSlot,Receipt
 from eapp import app, db, dao
-from sqlalchemy import func
 
 
 class AdminView(ModelView):
     def is_accessible(self): return current_user.is_authenticated and current_user.user_role == UserRole.ADMIN
 
-# eapp/admin.py
 
-# ... (Giữ nguyên TeacherBaseView cũ để dùng cho các trang thống kê/view thường)
-
-# --- THÊM CLASS MỚI NÀY ---
 class TeacherModelView(ModelView):
     def is_accessible(self):
         # Cho phép nếu là Admin HOẶC Teacher
@@ -50,14 +44,13 @@ class CourseView(AdminView):
     column_editable_list = ['name', 'price', 'active']
 
 
-# VIEW LỚP HỌC (Tự động tạo cột điểm)
 class ClassView(AdminView):
     column_list = ['name', 'course', 'teacher', 'time_slot', 'max_students', 'start_date', 'is_finished']
     column_labels = {
         'name': 'Tên Lớp',
         'course': 'Khóa Học',
         'teacher': 'Giáo Viên',
-        'time_slot': 'Ca Học',  # Hiển thị "Ca Học" thay vì "Time Slot"
+        'time_slot': 'Ca Học',
         'max_students': 'Sĩ Số',
         'start_date': 'Ngày Khai Giảng',
         'is_finished': 'Đã Kết Thúc'
@@ -67,7 +60,7 @@ class ClassView(AdminView):
     form_excluded_columns = ['is_finished', 'receipt_details', 'grades', 'attendances', 'grade_columns']
 
     def on_model_change(self, form, model, is_created):
-        if is_created:  # Tự tạo 3 cột mặc định
+        if is_created:
             db.session.add_all([
                 GradeColumn(name='Chuyên cần', weight=10, study_class=model),
                 GradeColumn(name='Giữa kỳ', weight=30, study_class=model),
@@ -83,7 +76,7 @@ class ClassView(AdminView):
                               course_id=old.course_id, teacher_id=old.teacher_id, start_date=datetime.now().date())
                 db.session.add(new_c);
                 db.session.flush()
-                for col in old.grade_columns:  # Copy cấu trúc điểm
+                for col in old.grade_columns:
                     db.session.add(GradeColumn(name=col.name, weight=col.weight, class_id=new_c.id))
             db.session.commit()
             flash('Đã nhân bản thành công!', 'success')
@@ -97,64 +90,61 @@ class ClassView(AdminView):
         flash('Đã khóa lớp!', 'success')
 
 
-# eapp/admin.py
-
-# Đảm bảo class này kế thừa TeacherBaseView
 class GradeColumnView(TeacherModelView):
     column_list = ['study_class', 'name', 'weight']
     column_labels = {'study_class': 'Lớp học', 'name': 'Tên cột điểm', 'weight': 'Trọng số (%)'}
 
     form_columns = ['study_class', 'name', 'weight']
 
-    # Cho phép tạo, sửa, xóa
+
     can_create = True
     can_edit = True
     can_delete = True
 
-    # Ràng buộc: Tổng trọng số không quá 100% (Optional)
+
     def on_model_change(self, form, model, is_created):
-        # Logic kiểm tra trọng số nếu cần
+
         if model.weight < 0 or model.weight > 100:
             raise Exception('Trọng số phải từ 0 đến 100!')
 
 
 class ReceiptView(AdminView):
+    column_searchable_list = ['user_id']
+
     def is_accessible(self):
         return current_user.is_authenticated and \
             (current_user.user_role == UserRole.ADMIN or current_user.user_role == UserRole.STAFF)
 
     column_list = ['id', 'user', 'created_date', 'total_amount',
-                   'status_alert']  # Thay is_paid bằng cột ảo status_alert
+                   'status_alert']
 
     column_labels = {
         'id': 'Mã HĐ',
         'user': 'Học viên',
         'created_date': 'Ngày đăng ký',
         'total_amount': 'Tổng tiền',
-        'status_alert': 'Trạng thái (Cần xử lý)'  # Tên cột hiển thị
+        'status_alert': 'Trạng thái (Cần xử lý)'
     }
 
     can_create = False
     can_edit = True
-    can_delete = True  # Cho phép xóa tay
+    can_delete = True
 
-    # --- HÀM TẠO CỘT MÀU SẮC ---
+
     def _status_formatter(view, context, model, name):
-        # 1. Nếu đã thanh toán -> Màu xanh
+
         if model.is_paid:
             return Markup('<span class="badge bg-success text-white">✅ Đã thanh toán</span>')
 
-        # 2. Tính thời gian: Đã trôi qua bao lâu?
+
         time_diff = datetime.now() - model.created_date
 
-        # 3. Nếu chưa trả tiền VÀ quá 48 tiếng (2 ngày) -> Màu đỏ (Cảnh báo)
         if time_diff > timedelta(hours=48):
             return Markup(f'''
                 <span class="badge bg-danger text-white">⚠️ QUÁ HẠN 48H</span>
                 <br><small class="text-danger">Cần hủy gấp</small>
             ''')
 
-        # 4. Nếu chưa trả tiền nhưng vẫn trong hạn -> Màu vàng
         return Markup('<span class="badge bg-warning text-dark">⏳ Chờ thanh toán</span>')
 
     # Gán hàm formatter vào cột
@@ -163,20 +153,16 @@ class ReceiptView(AdminView):
         'total_amount': lambda v, c, m, n: "{:,.0f} VNĐ".format(m.total_amount)
     }
 
-    # Khi xóa hóa đơn -> Xóa luôn bảng điểm (Giữ nguyên logic này để nhả chỗ)
     def on_model_delete(self, model):
         if model.is_paid:
             flash('CẢNH BÁO: Bạn vừa xóa một hóa đơn ĐÃ THANH TOÁN!', 'warning')
 
-        # Code xóa Grade (bảng điểm) để nhả slot
         from eapp.Models import ReceiptDetails, Grade
         details = ReceiptDetails.query.filter_by(receipt_id=model.id).all()
         for d in details:
             g = Grade.query.filter_by(student_id=model.user_id, class_id=d.class_id).first()
             if g: db.session.delete(g)
 
-# --- ĐÂY LÀ VIEW QUAN TRỌNG NHẤT: NHẬP ĐIỂM DYNAMIC ---
-# eapp/admin.py
 
 class GradeManagerView(TeacherBaseView):
     @expose('/')
@@ -184,7 +170,6 @@ class GradeManagerView(TeacherBaseView):
         class_id = request.args.get('class_id')
         chosen_class, columns, rows = None, [], []
 
-        # 1. Lấy danh sách lớp để lọc (Admin thấy hết, GV chỉ thấy lớp mình)
         if current_user.user_role == UserRole.ADMIN:
             classes = Class.query.all()
         else:
@@ -193,10 +178,8 @@ class GradeManagerView(TeacherBaseView):
         if class_id:
             chosen_class = Class.query.get(class_id)
             if chosen_class:
-                # 2. Lấy cấu trúc cột điểm của lớp
                 columns = GradeColumn.query.filter_by(class_id=class_id).all()
 
-                # 3. Lấy bảng điểm của sinh viên
                 grades = Grade.query.filter_by(class_id=class_id).all()
 
                 for g in grades:
@@ -223,7 +206,6 @@ class GradeManagerView(TeacherBaseView):
             grade_id = d.get('grade_id')
             col_id = d.get('column_id')
 
-            # --- KIỂM TRA DỮ LIỆU ĐẦU VÀO (VALIDATION) ---
             try:
                 val = float(d.get('value'))
             except ValueError:
@@ -231,9 +213,7 @@ class GradeManagerView(TeacherBaseView):
 
             if val < 0 or val > 10:
                 return jsonify({'status': 'error', 'msg': 'Điểm không hợp lệ (Phải từ 0 đến 10)!'})
-            # ---------------------------------------------
 
-            # 1. Lưu/Cập nhật điểm chi tiết
             score = GradeScore.query.filter_by(grade_id=grade_id, grade_column_id=col_id).first()
             if score:
                 score.value = val
@@ -241,10 +221,8 @@ class GradeManagerView(TeacherBaseView):
                 db.session.add(GradeScore(grade_id=grade_id, grade_column_id=col_id, value=val))
             db.session.commit()
 
-            # 2. Tính lại trung bình ngay lập tức
             self.recalculate(grade_id)
 
-            # 3. Trả về kết quả mới
             g = Grade.query.get(grade_id)
             return jsonify({'status': 'success', 'new_avg': g.final_average, 'new_res': g.result})
 
@@ -263,7 +241,6 @@ class GradeManagerView(TeacherBaseView):
 
         g = Grade.query.get(grade_id)
 
-        # Chia theo tổng trọng số thực tế (Linh hoạt hơn chia cứng cho 100)
         if total_weight > 0:
             g.final_average = round(total_score_weighted / total_weight, 2)
         else:
@@ -302,7 +279,6 @@ class AttendanceManagerView(TeacherBaseView):
         return redirect(url_for('attendance.index', class_id=cid, date=d_str))
 
 
-# eapp/admin.py
 
 class StatsView(BaseView):
     @expose('/')
@@ -315,13 +291,10 @@ class StatsView(BaseView):
         selected_month = int(month_str) if month_str and month_str.isdigit() else None
 
         return self.render('admin/stats.html',
-                           # Doanh thu: Luôn xem theo Năm (để vẽ đủ 12 tháng)
                            revenue_time=dao.stats_revenue_style_time(year=selected_year),
 
-                           # Học viên: Lọc theo Năm + Tháng (Đã có từ trước)
                            student_stats=dao.stats_student_count_by_course(year=selected_year, month=selected_month),
 
-                           # Tỷ lệ đạt: Lọc theo Năm + Tháng (MỚI SỬA)
                            pass_stats=dao.stats_pass_rate_by_course(year=selected_year, month=selected_month),
 
                            available_years=dao.get_revenue_years(),
@@ -329,27 +302,25 @@ class StatsView(BaseView):
                            selected_month=selected_month)
 
     def is_accessible(self):
-        return current_user.is_authenticated and current_user.user_role == UserRole.ADMIN
+        return current_user.is_authenticated and \
+               (current_user.user_role == UserRole.ADMIN or current_user.user_role == UserRole.STAFF)
 
 class TimeSlotView(AdminView):
     column_list = ['name', 'days', 'start_time', 'end_time']
     column_labels = {'name': 'Tên Ca', 'days': 'Thứ', 'start_time': 'Giờ BĐ', 'end_time': 'Giờ KT'}
     column_editable_list = ['name', 'days', 'start_time', 'end_time']
 
-    # Validate không cho nhập giờ sai (VD: Bắt đầu 25h)
     def on_model_change(self, form, model, is_created):
         if model.start_time >= model.end_time:
             raise Exception('Giờ bắt đầu phải nhỏ hơn giờ kết thúc!')
 class UserView(AdminView):
     def is_accessible(self):
-        # Admin và Staff đều được vào quản lý người dùng
         return current_user.is_authenticated and \
                (current_user.user_role == UserRole.ADMIN or current_user.user_role == UserRole.STAFF)
 
-    # Tùy chỉnh cột hiển thị cho gọn
     column_list = ['name', 'username', 'user_role', 'active']
-    column_editable_list = ['active'] # Staff có thể khóa nick học viên nếu cần
-    can_create = True # Staff được tạo tài khoản mới cho học viên
+    column_editable_list = ['active']
+    can_create = True
     can_edit = True
 class MyAdmin(AdminIndexView):
     @expose('/')
@@ -361,9 +332,9 @@ admin.add_view(CourseView(Course, db.session, name='Khóa học'))
 admin.add_view(ReceiptView(Receipt, db.session, name='Quản lí hóa đơn'))
 admin.add_view(AdminView(Category, db.session, name='Danh mục'))
 admin.add_view(ClassView(Class, db.session, name='Lớp học', endpoint='class_manager'))
-admin.add_view(UserView(User, db.session, name='Quản lý người dùng')) # Dùng class UserView vừa tạo# 3 VIEW QUAN TRỌNG:
-admin.add_view(GradeManagerView(name='Quản Lý Điểm', endpoint='grade_manager'))  # <-- View nhập điểm ma trận
-admin.add_view(GradeColumnView(GradeColumn, db.session, name='Cấu Hình Cột Điểm'))  # <-- Để thêm cột tùy ý
+admin.add_view(UserView(User, db.session, name='Quản lý người dùng'))
+admin.add_view(GradeManagerView(name='Quản Lý Điểm', endpoint='grade_manager'))
+admin.add_view(GradeColumnView(GradeColumn, db.session, name='Cấu Hình Cột Điểm'))
 admin.add_view(AttendanceManagerView(name='Điểm Danh', endpoint='attendance'))
 admin.add_view(TimeSlotView(TimeSlot, db.session, name='Quản Lý Ca Học'))
 admin.add_view(StatsView(name='Thống kê'))

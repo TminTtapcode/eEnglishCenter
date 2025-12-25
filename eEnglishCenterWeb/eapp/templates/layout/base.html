@@ -11,26 +11,24 @@
 
     <style>
         :root {
-            /* ĐỊNH NGHĨA BẢNG MÀU RIÊNG (Red Tone) */
-            --brand-primary: #d32f2f;       /* Đỏ đậm chủ đạo */
-            --brand-hover: #b71c1c;         /* Đỏ tối khi hover */
-            --brand-light: #ffcdd2;         /* Đỏ nhạt làm nền */
-            --text-dark: #333333;           /* Chữ đen dịu */
-            --card-shadow: 0 10px 20px rgba(0,0,0,0.05); /* Bóng đổ mềm */
+            --brand-primary: #d32f2f;
+            --brand-hover: #b71c1c;
+            --brand-light: #ffcdd2;
+            --text-dark: #333333;
+            --card-shadow: 0 10px 20px rgba(0,0,0,0.05);
         }
 
         body {
             font-family: 'Montserrat', sans-serif;
-            background-color: #fcfcfc; /* Nền trắng xám nhẹ hiện đại */
+            background-color: #fcfcfc;
             color: var(--text-dark);
             display: flex;
             flex-direction: column;
             min_height: 100vh;
         }
 
-        /* --- 1. TÙY BIẾN BOOTSTRAP (Override) --- */
 
-        /* Biến nút Primary (vốn màu xanh) thành ĐỎ */
+
         .btn-primary {
             background-color: var(--brand-primary);
             border-color: var(--brand-primary);
@@ -46,17 +44,14 @@
             box-shadow: 0 4px 10px rgba(211, 47, 47, 0.4);
         }
 
-        /* Chữ màu xanh -> Đỏ */
         .text-primary {
             color: var(--brand-primary) !important;
         }
 
-        /* Nền xanh -> Gradient Đỏ */
         .bg-primary {
             background: linear-gradient(135deg, #d32f2f 0%, #ff5252 100%) !important;
         }
 
-        /* --- 2. CARD KHÓA HỌC --- */
         .card {
             border: none; /* Bỏ viền đen xấu */
             border-radius: 16px; /* Bo góc mạnh hơn */
@@ -69,7 +64,6 @@
             box-shadow: var(--card-shadow);
         }
 
-        /* --- 3. FORM INPUT --- */
         .form-control {
             border-radius: 12px;
             padding: 12px 15px;
@@ -82,7 +76,6 @@
             background-color: #fff;
         }
 
-        /* Đẩy footer xuống đáy */
         section.container { flex: 1; padding-top: 30px; padding-bottom: 50px; }
     </style>
 </head>

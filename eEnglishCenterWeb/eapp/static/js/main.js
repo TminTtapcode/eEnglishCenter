@@ -1,4 +1,3 @@
-/* 1. Hàm thêm vào giỏ hàng (Đã bỏ tham số student info) */
 function addToCartSmart(id, name, price) {
     event.preventDefault();
 
@@ -16,16 +15,16 @@ function addToCartSmart(id, name, price) {
         return res.json();
     }).then(function(data) {
         if (data.error) {
-            alert(data.error); // VD: Lớp này đã có trong giỏ hàng
+            alert(data.error);
         } else {
-            // Cập nhật icon giỏ hàng
+           giỏ hàng
             let counter = document.getElementsByClassName('cart-counter');
             for (let i = 0; i < counter.length; i++)
                 counter[i].innerText = data.total_quantity;
 
             alert("Đã thêm lớp " + name + " vào giỏ hàng!");
 
-            // Đóng Modal
+
             let openModal = document.querySelector('.modal.show');
             if (openModal) {
                 let modalInstance = bootstrap.Modal.getInstance(openModal);
@@ -37,7 +36,6 @@ function addToCartSmart(id, name, price) {
     });
 }
 
-/* 2. Hàm xóa sản phẩm */
 function deleteCart(id) {
     if (confirm("Bạn muốn xóa lớp này?") == true) {
         fetch('/api/carts/' + id, {
@@ -48,7 +46,6 @@ function deleteCart(id) {
         }).then(function(res) {
             return res.json();
         }).then(function(data) {
-            // Reload trang để cập nhật lại bảng cho chuẩn
             location.reload();
         }).catch(function(err) {
             console.error(err);
@@ -56,9 +53,7 @@ function deleteCart(id) {
     }
 }
 
-/* 3. Hàm Thanh Toán */
 function pay() {
-    // Lấy giá trị radio button đang chọn
     let method = document.querySelector('input[name="paymentMethod"]:checked').value;
 
     let msg = method === 'online'
@@ -69,7 +64,7 @@ function pay() {
         fetch('/api/pay', {
             method: 'post',
             body: JSON.stringify({
-                'payment_method': method // Gửi kèm phương thức
+                'payment_method': method
             }),
             headers: {
                 'Content-Type': 'application/json'
