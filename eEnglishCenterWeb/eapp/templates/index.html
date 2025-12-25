@@ -1,0 +1,157 @@
+{% extends 'layout/base.html' %}
+
+{% block title %} Trang Chủ - Trung Tâm Ngoại Ngữ {% endblock %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-primary text-white rounded-3 shadow-sm">
+    <div class="container-fluid py-2">
+        <h1 class="display-5 fw-bold text-uppercase">Trung Tâm Ngoại Ngữ ABC</h1>
+        <p class="col-md-8 fs-4">Chinh phục đỉnh cao tri thức - Đăng ký học online nhanh chóng, tiện lợi.</p>
+        <a href="#courses-list" class="btn btn-warning btn-lg fw-bold mt-2">
+            <i class="fas fa-book-open"></i> Xem Khóa Học
+        </a>
+    </div>
+</div>
+
+<div id="courses-list"></div>
+
+{% if course %}
+    <h2 class="text-center text-primary fw-bold mb-4 text-uppercase">CÁC KHÓA HỌC NỔI BẬT</h2>
+
+    {% if page > 1 %}
+    <nav>
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if request.args.get('page', 1)|int == 1 %}disabled{% endif %}">
+                <a class="page-link" href="/?page={{ request.args.get('page', 1)|int - 1 }}">Trước</a>
+            </li>
+
+            {% for i in range(1, page+1) %}
+            <li class="page-item {% if request.args.get('page', 1)|int == i %}active{% endif %}">
+                <a class="page-link" href="/?page={{i}}">{{i}}</a>
+            </li>
+            {% endfor %}
+
+            <li class="page-item {% if request.args.get('page', 1)|int == page %}disabled{% endif %}">
+                <a class="page-link" href="/?page={{ request.args.get('page', 1)|int + 1 }}">Sau</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
+    <div class="row g-4 mb-5">
+        {% for c in course %}
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100 shadow-sm border-0 hover-card">
+                <a href="/course/{{c.id}}" title="Xem chi tiết {{c.name}}">
+                    <img class="card-img-top" src="{{c.image}}" style="height: 200px; object-fit: cover;" alt="{{c.name}}">
+                </a>
+
+                <div class="card-body d-flex flex-column">
+                    <a href="/course/{{c.id}}" class="text-decoration-none text-dark">
+                        <h5 class="card-title fw-bold text-truncate" title="{{c.name}}">{{c.name}}</h5>
+                    </a>
+
+                    <p class="card-text text-muted small" style="min-height: 40px">
+                        {{ c.description if c.description else "Khóa học chất lượng cao, cam kết đầu ra chuẩn quốc tế." }}
+                    </p>
+
+                    <h5 class="text-danger fw-bold mb-3">{{ "{:,.0f}".format(c.price) }} VNĐ</h5>
+
+                    <div class="mt-auto d-flex gap-2">
+                        <a href="/course/{{c.id}}" class="btn btn-outline-primary w-50 rounded-pill">
+                            <i class="fas fa-info-circle"></i> Chi tiết
+                        </a>
+                        <button class="btn btn-danger w-50 rounded-pill"
+                                data-bs-toggle="modal" data-bs-target="#modalCourse{{c.id}}">
+                            <i class="fas fa-calendar-check"></i> Chọn Lớp
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalCourse{{c.id}}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">Lịch Khai Giảng: {{c.name}}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                 {% if c.classes %}
+                 <div class="table-responsive">
+                     <table class="table table-hover align-middle mb-0">
+                         <thead class="table-light">
+                             <tr>
+                                 <th>Tên Lớp</th>
+                                 <th>Lịch Học</th>
+                                 <th class="text-center">Khai Giảng</th>
+                                 <th class="text-center">Sĩ Số</th>
+                                 <th class="text-center">Đăng Ký</th>
+                             </tr>
+                         </thead>
+                         <tbody>
+                             {% for cls in c.classes %}
+                             <tr>
+                                 <td class="fw-bold">{{ cls.name }}</td>
+                                 <td><span class="badge bg-info text-dark">{{ cls.schedule }}</span></td>
+                                 <td class="text-center text-muted small">
+                                     {{ cls.start_date.strftime('%d/%m/%Y') if cls.start_date else 'Chưa xếp' }}
+                                 </td>
+                                 <td class="text-center">
+                                     {% if cls.current_students >= cls.max_students %}
+                                         <span class="text-danger fw-bold">Full</span>
+                                     {% else %}
+                                         <span class="text-success fw-bold">{{cls.current_students}}/{{cls.max_students}}</span>
+                                     {% endif %}
+                                 </td>
+                                 <td class="text-center">
+                                     {% if cls.current_students >= cls.max_students %}
+                                         <button class="btn btn-secondary btn-sm" disabled>Hết chỗ</button>
+                                     {% else %}
+                                         <button class="btn btn-danger btn-sm px-3"
+                                                 onclick="addToCartSmart({{cls.id}}, '{{cls.name}}', {{c.price}})">
+                                             <i class="fas fa-cart-plus"></i> Chọn
+                                         </button>
+                                     {% endif %}
+                                 </td>
+                             </tr>
+                             {% endfor %}
+                         </tbody>
+                     </table>
+                 </div>
+                 {% else %}
+                     <div class="p-4 text-center text-muted">
+                         <i class="fas fa-calendar-times fa-3x mb-3 text-secondary"></i>
+                         <h5>Hiện chưa có lớp học nào mở đăng ký.</h5>
+                         <p>Vui lòng quay lại sau hoặc liên hệ trung tâm.</p>
+                     </div>
+                 {% endif %}
+              </div>
+              <div class="modal-footer">
+                  <a href="/course/{{c.id}}" class="btn btn-link text-decoration-none">Xem chi tiết khóa học >></a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-warning text-center p-5 shadow-sm">
+        <i class="fas fa-search fa-3x mb-3"></i>
+        <h4>Không tìm thấy khóa học nào phù hợp.</h4>
+        <a href="/" class="btn btn-primary mt-3">Quay về danh sách đầy đủ</a>
+    </div>
+{% endif %}
+
+<style>
+    .hover-card {
+        transition: transform 0.2s;
+    }
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+</style>
+
+{% endblock %}

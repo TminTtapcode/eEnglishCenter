@@ -1,0 +1,84 @@
+{% extends 'layout/base.html' %}
+
+{% block title %} Đăng Ký Thành Viên {% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 85vh;">
+
+    <div class="card shadow-lg border-0 rounded-4" style="width: 500px;">
+        <div class="card-body p-5">
+            <h3 class="text-center text-primary fw-bold mb-4 text-uppercase">
+                <i class="fas fa-user-plus"></i> Đăng Ký
+            </h3>
+
+            {% if err_msg %}
+            <div class="alert alert-danger text-center shadow-sm mb-4">
+                <i class="fas fa-exclamation-triangle"></i> {{ err_msg }}
+            </div>
+            {% endif %}
+
+            <form method="post" action="/register" enctype="multipart/form-data">
+
+                <h6 class="text-muted fw-bold mb-3 border-bottom pb-2">Thông tin cá nhân</h6>
+
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control rounded-pill bg-light" id="name" name="name" placeholder="Họ tên" required>
+                    <label for="name"><i class="fas fa-user"></i> Họ và Tên</label>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="email" class="form-control rounded-pill bg-light" id="email" name="email" placeholder="Email" required>
+                            <label for="email"><i class="fas fa-envelope"></i> Email</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="tel" class="form-control rounded-pill bg-light" id="phone" name="phone" placeholder="SĐT" required>
+                            <label for="phone"><i class="fas fa-phone"></i> SĐT</label>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="text-muted fw-bold mb-3 border-bottom pb-2 mt-2">Tài khoản & Mật khẩu</h6>
+
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control rounded-pill bg-light" id="username" name="username" placeholder="Username" required>
+                    <label for="username"><i class="fas fa-id-badge"></i> Tên đăng nhập</label>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="password" class="form-control rounded-pill bg-light" id="pwd" name="password" placeholder="Mật khẩu" required>
+                            <label for="pwd"><i class="fas fa-lock"></i> Mật khẩu</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating mb-3">
+                            <input type="password" class="form-control rounded-pill bg-light" id="confirm" name="confirm" placeholder="Nhập lại" required>
+                            <label for="confirm"><i class="fas fa-check-circle"></i> Nhập lại</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4 mt-2">
+                    <label for="avatar" class="form-label fw-bold small text-muted ms-2">Ảnh đại diện (Avatar)</label>
+                    <input type="file" class="form-control rounded-pill bg-light" id="avatar" name="avatar">
+                </div>
+
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary rounded-pill fw-bold py-2 shadow-sm text-uppercase">
+                        Đăng Ký Ngay
+                    </button>
+                </div>
+            </form>
+
+            <div class="text-center mt-4 text-muted">
+                Đã có tài khoản? <a href="/login" class="text-decoration-none fw-bold text-primary">Đăng nhập</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

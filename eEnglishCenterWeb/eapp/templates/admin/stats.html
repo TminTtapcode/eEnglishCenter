@@ -1,0 +1,163 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+        <h3 class="text-secondary">Báo Cáo Thống Kê</h3>
+        <small class="text-muted">Dữ liệu hệ thống</small>
+    </div>
+
+    <div class="card mb-4 border-light shadow-sm bg-white">
+        <div class="card-body py-3">
+            <form method="get" action="" class="row justify-content-center align-items-center g-3">
+                <div class="col-auto">
+                    <span class="fw-bold text-muted">Xem dữ liệu:</span>
+                </div>
+
+                <div class="col-auto">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">Tháng</span>
+                        <select name="month" class="form-select" style="width: 120px;">
+                            <option value="">-- Tất cả --</option>
+                            {% for m in range(1, 13) %}
+                                <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>
+                                    {{ m }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-auto">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">Năm</span>
+                        <select name="year" class="form-select" style="width: 120px;">
+                            {% if available_years %}
+                                {% for y in available_years %}
+                                    <option value="{{ y[0] | int }}" {% if y[0] | int == selected_year %}selected{% endif %}>
+                                        {{ y[0] | int }}
+                                    </option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="{{ selected_year }}">{{ selected_year }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-search"></i> Xem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light fw-bold">
+            <i class="fas fa-chart-line me-1"></i> Biểu đồ doanh thu (Năm {{ selected_year }})
+        </div>
+        <div class="card-body">
+            <canvas id="revenueChart" style="max-height: 350px;"></canvas>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-light fw-bold">
+                    <i class="fas fa-users me-1"></i> Số lượng học viên đăng ký
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-light text-center">
+                            <tr>
+                                <th>Khóa học</th>
+                                <th width="100">Số lượng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if student_stats %}
+                                {% for s in student_stats %}
+                                <tr>
+                                    <td class="ps-3">{{ s[0] }}</td>
+                                    <td class="text-center fw-bold">{{ s[1] }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="2" class="text-center text-muted py-3">Không có dữ liệu</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-light fw-bold">
+                    <i class="fas fa-chart-pie me-1"></i> Tỷ lệ Đạt (%)
+                </div>
+                <div class="card-body">
+                    <canvas id="passRateChart"></canvas>
+                    {% if not pass_stats %}
+                        <p class="text-center text-muted mt-3">Chưa có dữ liệu điểm số.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+window.onload = function() {
+    // 1. DOANH THU (Line Chart - Màu xanh cơ bản)
+    const ctxRev = document.getElementById('revenueChart');
+    let labels = [], data = [];
+    for(let i=1; i<=12; i++) { labels.push("Tháng " + i); data.push(0); }
+    {% for s in revenue_time %} data[{{ s[0] }} - 1] = {{ s[1] }}; {% endfor %}
+
+    new Chart(ctxRev, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Doanh thu (VNĐ)',
+                data: data,
+                borderColor: '#0d6efd', // Màu xanh Bootstrap mặc định
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    // 2. TỶ LỆ ĐẠT (Bar Chart - Màu sắc đơn giản)
+    const ctxPass = document.getElementById('passRateChart');
+    {% if pass_stats %}
+    new Chart(ctxPass, {
+        type: 'bar',
+        data: {
+            labels: [{% for s in pass_stats %} "{{s[0]}}", {% endfor %}],
+            datasets: [{
+                label: 'Tỷ lệ đạt (%)',
+                data: [{% for s in pass_stats %} ({{s[2]}}/{{s[1]}}*100).toFixed(1), {% endfor %}],
+                backgroundColor: '#198754' // Màu xanh lá Bootstrap (Success)
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, max: 100 } }
+        }
+    });
+    {% endif %}
+}
+</script>
+{% endblock %}
